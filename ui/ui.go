@@ -16,19 +16,15 @@ import (
 
 func InitialModel() Model {
 	return Model{
-		Choices:     []string{"Buy carrots", "Buy celery", "Buy kohlrabi"},
 		Cursor:      0,
-		Selected:    make(map[int]struct{}),
 		CurrentView: "TorrentList",
-		Progress:    0.8,
+		Progress:    0.0,
 		TorrentList: torrents.TorrentList{},
 	}
 }
 
 type Model struct {
-	Choices     []string
 	Cursor      int
-	Selected    map[int]struct{}
 	CurrentView string
 	Progress    float64
 	TorrentList torrents.TorrentList
@@ -71,6 +67,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return updateListView(msg, m)
 	case "AddTorrent":
 		return updateAddTorrentView(msg, m)
+	case "RemoveTorrent":
+		return updateRemoveTorrentView(msg, m)
+	}
+	return m, nil
+}
+
+func updateRemoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "esc":
+			m.CurrentView = "TorrentList"
+		case "y":
+			http.DeleteTorrent(m.TorrentList.Torrents[m.Cursor], true)
+			m.CurrentView = "TorrentList"
+		case "n":
+			http.DeleteTorrent(m.TorrentList.Torrents[m.Cursor], false)
+			m.CurrentView = "TorrentList"
+		}
+	case tickMsg:
+		m.TorrentList = http.UpdateTorrentList()
+		return m, tick()
 	}
 	return m, nil
 }
@@ -83,6 +102,9 @@ func updateAddTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		case "esc":
 			m.CurrentView = "TorrentList"
 		}
+	case tickMsg:
+		m.TorrentList = http.UpdateTorrentList()
+		return m, tick()
 	}
 	return m, nil
 }
@@ -94,7 +116,12 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "a":
 			m.CurrentView = "AddTorrent"
-
+		case "r":
+			if len(m.TorrentList.Torrents) != 0 {
+				m.CurrentView = "RemoveTorrent"
+			}
+		case "p":
+			http.PauseResumeTorrent(m.TorrentList.Torrents[m.Cursor])
 		case "up", "k":
 			if m.Cursor > 0 {
 				m.Cursor--
@@ -104,16 +131,7 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 			if m.Cursor < len(m.TorrentList.Torrents)-1 {
 				m.Cursor++
 			}
-
-		case "enter", " ":
-			_, ok := m.Selected[m.Cursor]
-			if ok {
-				delete(m.Selected, m.Cursor)
-			} else {
-				m.Selected[m.Cursor] = struct{}{}
-			}
 		}
-
 	// Get updated info
 	case tickMsg:
 		m.TorrentList = http.UpdateTorrentList()
@@ -134,6 +152,9 @@ func (m Model) View() string {
 		break
 	case "AddTorrent":
 		s = addTorrentView(m)
+		break
+	case "RemoveTorrent":
+		s = removeTorrentView(m)
 		break
 	case "Quitting":
 		return "\n  See you later!\n\n"
@@ -159,14 +180,22 @@ func addTorrentView(m Model) string {
 	return fmt.Sprintf(tpl)
 }
 
-func listView(m Model) string {
-	c := m.Cursor
+func removeTorrentView(m Model) string {
+	selectedTorrent := m.TorrentList.Torrents[m.Cursor]
 
+	tpl := fmt.Sprintf("Deleting %s\n\n", selectedTorrent.Name)
+	tpl += "Keep data?\n\n"
+	tpl += components.KeybindsHints([]string{"y: yes", "n: no", "esc: back"})
+
+	return fmt.Sprintf(tpl)
+}
+
+func listView(m Model) string {
 	tpl := "%s active:\n"
 	for index, torrent := range m.TorrentList.Torrents {
-		tpl += components.Torrent(torrent, index == c)
+		tpl += components.Torrent(torrent, index == m.Cursor)
 	}
-	tpl += components.KeybindsHints([]string{"a: add new torrent", "j/k, up/down: select", "enter: choose", "q: quit"})
+	tpl += components.KeybindsHints([]string{"j/k, up/down: select", "p: pause/resume torrent", "a: add new torrent", "r: remove torrent", "q: quit"})
 
 	return fmt.Sprintf(tpl, english.Plural(m.TorrentList.TorrentsTotal, "torrent", ""))
 }

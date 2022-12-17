@@ -40,7 +40,7 @@ func isAutoManaged(flags uint64) bool {
 	return checkBit(flags, 5)
 }
 
-func isPaused(flags uint64) bool {
+func IsPaused(flags uint64) bool {
 	return (flags & (1 << 4)) == 1<<4
 }
 
@@ -66,7 +66,7 @@ func StateString(torrent Torrent) string {
 	switch torrent.State {
 	case 1:
 		{
-			if isPaused(torrent.Flags) {
+			if IsPaused(torrent.Flags) {
 				return "file check queued"
 			}
 			return "checking files"
@@ -75,7 +75,7 @@ func StateString(torrent Torrent) string {
 		return "downloading metadata"
 	case 3:
 		{
-			if isPaused(torrent.Flags) {
+			if IsPaused(torrent.Flags) {
 				if isAutoManaged(torrent.Flags) {
 					return "queued"
 				}
@@ -87,7 +87,7 @@ func StateString(torrent Torrent) string {
 		return "finished"
 	case 5:
 		{
-			if isPaused(torrent.Flags) {
+			if IsPaused(torrent.Flags) {
 				if isAutoManaged(torrent.Flags) {
 					return "seeding queued"
 				}
