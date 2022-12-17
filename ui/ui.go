@@ -9,31 +9,57 @@ import (
 	"osprey/http"
 	"osprey/ui/components"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dustin/go-humanize/english"
 	"github.com/muesli/reflow/indent"
 )
 
-func InitialModel() Model {
-	return Model{
-		Cursor:      0,
-		CurrentView: "TorrentList",
-		Progress:    0.0,
-		TorrentList: torrents.TorrentList{},
-	}
-}
-
-type Model struct {
-	Cursor      int
-	CurrentView string
-	Progress    float64
-	TorrentList torrents.TorrentList
-}
-
 type (
 	tickMsg  struct{}
 	frameMsg struct{}
 )
+
+const (
+	AddTorrentMagnetLinkInput = iota
+	AddTorrentSavePathInput
+)
+
+func InitialModel() Model {
+	var addTorrentTextInputs []textinput.Model = make([]textinput.Model, 2)
+	addTorrentTextInputs[AddTorrentMagnetLinkInput] = textinput.New()
+	addTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = "magnet:..."
+	addTorrentTextInputs[AddTorrentMagnetLinkInput].Focus()
+	addTorrentTextInputs[AddTorrentMagnetLinkInput].CharLimit = -1
+	addTorrentTextInputs[AddTorrentMagnetLinkInput].Width = 50
+	addTorrentTextInputs[AddTorrentMagnetLinkInput].Prompt = ""
+
+	addTorrentTextInputs[AddTorrentSavePathInput] = textinput.New()
+	addTorrentTextInputs[AddTorrentSavePathInput].Placeholder = "/path/to/save/dir/"
+	addTorrentTextInputs[AddTorrentSavePathInput].CharLimit = -1
+	addTorrentTextInputs[AddTorrentSavePathInput].Width = 50
+	addTorrentTextInputs[AddTorrentSavePathInput].Prompt = ""
+
+	return Model{
+		Cursor:               0,
+		SubMenuCursor:        0,
+		CurrentView:          "TorrentList",
+		Progress:             0.0,
+		TorrentList:          torrents.TorrentList{},
+		AddTorrentTextInputs: addTorrentTextInputs,
+		AddingMagnetLink:     true,
+	}
+}
+
+type Model struct {
+	Cursor               int
+	SubMenuCursor        int
+	CurrentView          string
+	Progress             float64
+	TorrentList          torrents.TorrentList
+	AddTorrentTextInputs []textinput.Model
+	AddingMagnetLink     bool
+}
 
 func tick() tea.Cmd {
 	return tea.Tick(time.Second, func(time.Time) tea.Msg {
@@ -95,18 +121,55 @@ func updateRemoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 }
 
 func updateAddTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+	var cmds []tea.Cmd = make([]tea.Cmd, len(m.AddTorrentTextInputs))
 
+	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
 			m.CurrentView = "TorrentList"
+
+		case "up":
+			if m.SubMenuCursor > 0 {
+				m.SubMenuCursor--
+			}
+		case "down":
+			if m.SubMenuCursor < len(m.AddTorrentTextInputs)-1 {
+				m.SubMenuCursor++
+			}
+
+		case "tab":
+			m.AddingMagnetLink = !m.AddingMagnetLink
+			if m.AddingMagnetLink {
+				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = "magnet:..."
+			} else {
+				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = "/path/to/torrent/file"
+			}
+
+		case "enter":
+			if (m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Value() != "") && (m.AddTorrentTextInputs[AddTorrentSavePathInput].Value() != "") {
+				http.AddTorrent(m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Value(), m.AddTorrentTextInputs[AddTorrentSavePathInput].Value(), m.AddingMagnetLink)
+				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Reset()
+				m.AddTorrentTextInputs[AddTorrentSavePathInput].Reset()
+				m.CurrentView = "TorrentList"
+			}
+
 		}
+
+		for i := range m.AddTorrentTextInputs {
+			m.AddTorrentTextInputs[i].Blur()
+		}
+		m.AddTorrentTextInputs[m.SubMenuCursor].Focus()
+
 	case tickMsg:
 		m.TorrentList = http.UpdateTorrentList()
 		return m, tick()
 	}
-	return m, nil
+
+	for i := range m.AddTorrentTextInputs {
+		m.AddTorrentTextInputs[i], cmds[i] = m.AddTorrentTextInputs[i].Update(msg)
+	}
+	return m, tea.Batch(cmds...)
 }
 
 func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
@@ -115,6 +178,7 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "a":
+			m.SubMenuCursor = 0
 			m.CurrentView = "AddTorrent"
 		case "r":
 			if len(m.TorrentList.Torrents) != 0 {
@@ -175,7 +239,15 @@ func loadingView(m Model) string {
 
 func addTorrentView(m Model) string {
 	tpl := "Add torrent\n\n"
-	tpl += components.KeybindsHints([]string{"esc: back", "q: quit"})
+	if m.AddingMagnetLink {
+		tpl += "Magnet link\n"
+	} else {
+		tpl += "Path to .torrent file\n"
+	}
+	tpl += m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].View() + "\n\n"
+	tpl += "Save path\n"
+	tpl += m.AddTorrentTextInputs[AddTorrentSavePathInput].View() + "\n\n"
+	tpl += components.KeybindsHints([]string{"tab: toggle magnet/.torrent", "up/down: select", "enter: done", "esc: back", "q: quit"})
 
 	return fmt.Sprintf(tpl)
 }
