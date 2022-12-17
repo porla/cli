@@ -40,25 +40,34 @@ func InitialModel() Model {
 	addTorrentTextInputs[AddTorrentSavePathInput].Width = 50
 	addTorrentTextInputs[AddTorrentSavePathInput].Prompt = ""
 
+	moveTorrentPathTextInput := textinput.New()
+	moveTorrentPathTextInput.Placeholder = "/path/to/new/save/dir/"
+	moveTorrentPathTextInput.Focus()
+	moveTorrentPathTextInput.CharLimit = -1
+	moveTorrentPathTextInput.Width = 50
+	moveTorrentPathTextInput.Prompt = ""
+
 	return Model{
-		Cursor:               0,
-		SubMenuCursor:        0,
-		CurrentView:          "TorrentList",
-		Progress:             0.0,
-		TorrentList:          torrents.TorrentList{},
-		AddTorrentTextInputs: addTorrentTextInputs,
-		AddingMagnetLink:     true,
+		Cursor:                   0,
+		SubMenuCursor:            0,
+		CurrentView:              "TorrentList",
+		Progress:                 0.0,
+		TorrentList:              torrents.TorrentList{},
+		AddTorrentTextInputs:     addTorrentTextInputs,
+		AddingMagnetLink:         true,
+		MoveTorrentPathTextInput: moveTorrentPathTextInput,
 	}
 }
 
 type Model struct {
-	Cursor               int
-	SubMenuCursor        int
-	CurrentView          string
-	Progress             float64
-	TorrentList          torrents.TorrentList
-	AddTorrentTextInputs []textinput.Model
-	AddingMagnetLink     bool
+	Cursor                   int
+	SubMenuCursor            int
+	CurrentView              string
+	Progress                 float64
+	TorrentList              torrents.TorrentList
+	AddTorrentTextInputs     []textinput.Model
+	AddingMagnetLink         bool
+	MoveTorrentPathTextInput textinput.Model
 }
 
 func tick() tea.Cmd {
@@ -95,6 +104,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return updateAddTorrentView(msg, m)
 	case "RemoveTorrent":
 		return updateRemoveTorrentView(msg, m)
+	case "MoveTorrent":
+		return updateMoveTorrentView(msg, m)
 	}
 	return m, nil
 }
@@ -172,6 +183,28 @@ func updateAddTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func updateMoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	switch msg := msg.(type) {
+
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "esc":
+			m.CurrentView = "TorrentList"
+
+		case "enter":
+			http.MoveTorrent(m.TorrentList.Torrents[m.Cursor], m.MoveTorrentPathTextInput.Value())
+			m.MoveTorrentPathTextInput.Reset()
+			m.CurrentView = "TorrentList"
+		}
+	case tickMsg:
+		m.TorrentList = http.UpdateTorrentList()
+		return m, tick()
+	}
+	m.MoveTorrentPathTextInput, cmd = m.MoveTorrentPathTextInput.Update(msg)
+	return m, cmd
+}
+
 func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
@@ -195,6 +228,9 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 			if m.Cursor < len(m.TorrentList.Torrents)-1 {
 				m.Cursor++
 			}
+		case "m":
+			m.MoveTorrentPathTextInput.SetValue(m.TorrentList.Torrents[m.Cursor].SavePath)
+			m.CurrentView = "MoveTorrent"
 		}
 	// Get updated info
 	case tickMsg:
@@ -219,6 +255,9 @@ func (m Model) View() string {
 		break
 	case "RemoveTorrent":
 		s = removeTorrentView(m)
+		break
+	case "MoveTorrent":
+		s = moveTorrentView(m)
 		break
 	case "Quitting":
 		return "\n  See you later!\n\n"
@@ -262,12 +301,22 @@ func removeTorrentView(m Model) string {
 	return fmt.Sprintf(tpl)
 }
 
+func moveTorrentView(m Model) string {
+	selectedTorrent := m.TorrentList.Torrents[m.Cursor]
+	tpl := fmt.Sprintf("Moving %s\n\n", selectedTorrent.Name)
+	tpl += "New save path\n"
+	tpl += m.MoveTorrentPathTextInput.View() + "\n\n"
+	tpl += components.KeybindsHints([]string{"enter: done", "esc: back", "q: quit"})
+
+	return fmt.Sprintf(tpl)
+}
+
 func listView(m Model) string {
 	tpl := "%s active:\n"
 	for index, torrent := range m.TorrentList.Torrents {
 		tpl += components.Torrent(torrent, index == m.Cursor)
 	}
-	tpl += components.KeybindsHints([]string{"j/k, up/down: select", "p: pause/resume torrent", "a: add new torrent", "r: remove torrent", "q: quit"})
+	tpl += components.KeybindsHints([]string{"j/k, up/down: select", "p: pause/resume torrent", "a: add new torrent", "r: remove torrent", "m: move torrent", "q: quit"})
 
 	return fmt.Sprintf(tpl, english.Plural(m.TorrentList.TorrentsTotal, "torrent", ""))
 }

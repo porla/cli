@@ -44,6 +44,44 @@ func UpdateTorrentList() torrents.TorrentList {
 	return torrentListRequestResponse.Result
 }
 
+func AddTorrent(magnetURI, savePath string, addingMagnetLink bool) {
+	requestBody := []byte{}
+	if addingMagnetLink {
+		requestBody = []byte(`{
+			"jsonrpc": "2.0",
+			"method": "torrents.add",
+			"params": {
+				"magnet_uri":"` + magnetURI + `",
+				"save_path":"` + savePath + `"
+			}
+		}`)
+	} else {
+		f, err := os.Open(magnetURI)
+		utils.CheckError(err)
+
+		// Read entire JPG into byte slice.
+		reader := bufio.NewReader(f)
+		content, err := ioutil.ReadAll(reader)
+		utils.CheckError(err)
+
+		// Encode as base64.
+		encoded := base64.StdEncoding.EncodeToString(content)
+		requestBody = []byte(`{
+			"jsonrpc": "2.0",
+			"method": "torrents.add",
+			"params": {
+				"ti":"` + encoded + `",
+				"save_path":"` + savePath + `"
+			}
+		}`)
+	}
+	req, err := http.NewRequest("POST", config.Config.JSONRPCEndpointURL, bytes.NewBuffer(requestBody))
+	utils.CheckError(err)
+	req.Header.Add("Authorization", "Bearer "+config.Config.SecretKey)
+	_, err = client.Do(req)
+	utils.CheckError(err)
+}
+
 func DeleteTorrent(torrent torrents.Torrent, keepData bool) {
 	removeDataJSON, err := json.Marshal(!keepData)
 	utils.CheckError(err)
@@ -81,48 +119,26 @@ func PauseResumeTorrent(torrent torrents.Torrent) {
 	utils.CheckError(err)
 }
 
+func MoveTorrent(torrent torrents.Torrent, newPath string) {
+	requestBody := []byte(`{
+		"jsonrpc": "2.0",
+		"method": "torrents.move",
+		"params": {
+			"info_hash":` + getMarshalledInfoHash(torrent) + `,
+			"path": "` + newPath + `"
+		}
+	}`)
+	req, err := http.NewRequest("POST", config.Config.JSONRPCEndpointURL, bytes.NewBuffer(requestBody))
+	utils.CheckError(err)
+	req.Header.Add("Authorization", "Bearer "+config.Config.SecretKey)
+	_, err = client.Do(req)
+	utils.CheckError(err)
+}
+
 func getMarshalledInfoHash(torrent torrents.Torrent) string {
 	marshalledInfoHash, err := json.Marshal(torrent.InfoHash)
 	utils.CheckError(err)
 	marshalledInfoHashWithNull := strings.Replace(string(marshalledInfoHash), "\"\"", "null", -1)
 	utils.CheckError(err)
 	return marshalledInfoHashWithNull
-}
-
-func AddTorrent(magnetURI, savePath string, addingMagnetLink bool) {
-	requestBody := []byte{}
-	if addingMagnetLink {
-		requestBody = []byte(`{
-			"jsonrpc": "2.0",
-			"method": "torrents.add",
-			"params": {
-				"magnet_uri":"` + magnetURI + `",
-				"save_path":"` + savePath + `"
-			}
-		}`)
-	} else {
-		f, err := os.Open(magnetURI)
-		utils.CheckError(err)
-
-		// Read entire JPG into byte slice.
-		reader := bufio.NewReader(f)
-		content, err := ioutil.ReadAll(reader)
-		utils.CheckError(err)
-
-		// Encode as base64.
-		encoded := base64.StdEncoding.EncodeToString(content)
-		requestBody = []byte(`{
-			"jsonrpc": "2.0",
-			"method": "torrents.add",
-			"params": {
-				"ti":"` + encoded + `",
-				"save_path":"` + savePath + `"
-			}
-		}`)
-	}
-	req, err := http.NewRequest("POST", config.Config.JSONRPCEndpointURL, bytes.NewBuffer(requestBody))
-	utils.CheckError(err)
-	req.Header.Add("Authorization", "Bearer "+config.Config.SecretKey)
-	_, err = client.Do(req)
-	utils.CheckError(err)
 }
