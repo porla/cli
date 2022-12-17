@@ -1,2 +1,2 @@
 # osprey
-Osprey. A command line torrent client frontend for Porla.
+A neat CLI for remotely managing Porla.
