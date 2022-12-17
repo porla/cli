@@ -57,6 +57,7 @@ func InitialModel() Model {
 	moveTorrentPathTextInput.Prompt = ""
 
 	return Model{
+		Page:                     0,
 		Cursor:                   0,
 		SubMenuCursor:            0,
 		CurrentView:              TorrentListIota,
@@ -69,6 +70,7 @@ func InitialModel() Model {
 }
 
 type Model struct {
+	Page                     int
 	Cursor                   int
 	SubMenuCursor            int
 	CurrentView              int
@@ -134,7 +136,6 @@ func updateRemoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 			m.CurrentView = TorrentListIota
 		}
 	case tickMsg:
-		m.TorrentList = http.UpdateTorrentList()
 		return m, tick()
 	}
 	return m, nil
@@ -182,7 +183,6 @@ func updateAddTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		m.AddTorrentTextInputs[m.SubMenuCursor].Focus()
 
 	case tickMsg:
-		m.TorrentList = http.UpdateTorrentList()
 		return m, tick()
 	}
 
@@ -207,7 +207,6 @@ func updateMoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 			m.CurrentView = TorrentListIota
 		}
 	case tickMsg:
-		m.TorrentList = http.UpdateTorrentList()
 		return m, tick()
 	}
 	m.MoveTorrentPathTextInput, cmd = m.MoveTorrentPathTextInput.Update(msg)
@@ -232,10 +231,17 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 			if m.Cursor > 0 {
 				m.Cursor--
 			}
-
 		case "down", "j":
 			if m.Cursor < len(m.TorrentList.Torrents)-1 {
 				m.Cursor++
+			}
+		case "left", "g":
+			if m.Page > 0 {
+				m.Page--
+			}
+		case "right", "h":
+			if m.Page < getPageCount(m)-1 {
+				m.Page++
 			}
 		case "m":
 			m.MoveTorrentPathTextInput.SetValue(m.TorrentList.Torrents[m.Cursor].SavePath)
@@ -243,7 +249,13 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		}
 	// Get updated info
 	case tickMsg:
-		m.TorrentList = http.UpdateTorrentList()
+		m.TorrentList = http.UpdateTorrentList(m.Page)
+		if m.Cursor > len(m.TorrentList.Torrents)-1 {
+			m.Cursor = len(m.TorrentList.Torrents) - 1
+		}
+		if m.Page > getPageCount(m)-1 {
+			m.Page = getPageCount(m) - 1
+		}
 		return m, tick()
 	}
 	return m, nil
@@ -321,11 +333,16 @@ func moveTorrentView(m Model) string {
 }
 
 func listView(m Model) string {
-	tpl := "%s active:\n"
+	tpl := "%s active\n"
 	for index, torrent := range m.TorrentList.Torrents {
 		tpl += components.Torrent(torrent, index == m.Cursor)
 	}
-	tpl += components.KeybindsHints([]string{"j/k, up/down: select", "p: pause/resume torrent", "a: add new torrent", "r: remove torrent", "m: move torrent", "q: quit"})
+	tpl += "Page %d/%d (max %d results)\n\n"
+	tpl += components.KeybindsHints([]string{"j/k, up/down: select", "g/h, left/right: change page", "p: pause/resume torrent", "a: add new torrent", "r: remove torrent", "m: move torrent", "q: quit"})
 
-	return fmt.Sprintf(tpl, english.Plural(m.TorrentList.TorrentsTotal, "torrent", ""))
+	return fmt.Sprintf(tpl, english.Plural(m.TorrentList.TorrentsTotal, "torrent", ""), m.Page+1, getPageCount(m), config.Config.PageSize)
+}
+
+func getPageCount(m Model) int {
+	return (m.TorrentList.TorrentsTotal-1)/config.Config.PageSize + 1
 }

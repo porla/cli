@@ -11,6 +11,7 @@ import (
 	"osprey/config"
 	"osprey/data/torrents"
 	"osprey/utils"
+	"strconv"
 	"strings"
 )
 
@@ -26,11 +27,14 @@ func redirectPolicyFunc(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
-func UpdateTorrentList() torrents.TorrentList {
+func UpdateTorrentList(page int) torrents.TorrentList {
 	requestBody := []byte(`{
 		"jsonrpc": "2.0",
 		"method": "torrents.list",
-		"params": {}
+		"params": {
+			"page": ` + strconv.Itoa(page) + `,
+  			"page_size": ` + strconv.Itoa(config.Config.PageSize) + `
+		}
 	}`)
 	req, err := http.NewRequest("POST", config.Config.JSONRPCEndpointURL, bytes.NewBuffer(requestBody))
 	utils.CheckError(err)
