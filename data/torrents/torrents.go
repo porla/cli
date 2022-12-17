@@ -1,5 +1,7 @@
 package torrents
 
+import "osprey/config"
+
 type Torrent struct {
 	DownloadRate  uint64    `json:"download_rate"`
 	UploadRate    uint64    `json:"upload_rate"`
@@ -60,41 +62,41 @@ func StateColor(torrent Torrent) string {
 
 func StateString(torrent Torrent) string {
 	if torrent.Error {
-		return "error"
+		return config.Currenti18n.TorrentStates.Error
 	}
 
 	switch torrent.State {
 	case 1:
 		{
 			if IsPaused(torrent.Flags) {
-				return "file check queued"
+				return config.Currenti18n.TorrentStates.FileCheckQueued
 			}
-			return "checking files"
+			return config.Currenti18n.TorrentStates.CheckingFiles
 		}
 	case 2:
-		return "downloading metadata"
+		return config.Currenti18n.TorrentStates.DownloadingMetadata
 	case 3:
 		{
 			if IsPaused(torrent.Flags) {
 				if isAutoManaged(torrent.Flags) {
-					return "queued"
+					return config.Currenti18n.TorrentStates.Queued
 				}
-				return "paused"
+				return config.Currenti18n.TorrentStates.Paused
 			}
-			return "downloading"
+			return config.Currenti18n.TorrentStates.Downloading
 		}
 	case 4:
-		return "finished"
+		return config.Currenti18n.TorrentStates.Finished
 	case 5:
 		{
 			if IsPaused(torrent.Flags) {
 				if isAutoManaged(torrent.Flags) {
-					return "seeding queued"
+					return config.Currenti18n.TorrentStates.SeedingQueued
 				}
-				return "finished"
+				return config.Currenti18n.TorrentStates.Finished
 			}
-			return "seeding"
+			return config.Currenti18n.TorrentStates.Seeding
 		}
 	}
-	return "unknown"
+	return config.Currenti18n.TorrentStates.Unknown
 }

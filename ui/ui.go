@@ -37,20 +37,20 @@ const (
 func InitialModel() Model {
 	var addTorrentTextInputs []textinput.Model = make([]textinput.Model, 2)
 	addTorrentTextInputs[AddTorrentMagnetLinkInput] = textinput.New()
-	addTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = "magnet:..."
+	addTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = config.Currenti18n.MagnetLinkPlaceHolder
 	addTorrentTextInputs[AddTorrentMagnetLinkInput].Focus()
 	addTorrentTextInputs[AddTorrentMagnetLinkInput].CharLimit = -1
 	addTorrentTextInputs[AddTorrentMagnetLinkInput].Width = 50
 	addTorrentTextInputs[AddTorrentMagnetLinkInput].Prompt = ""
 
 	addTorrentTextInputs[AddTorrentSavePathInput] = textinput.New()
-	addTorrentTextInputs[AddTorrentSavePathInput].Placeholder = "/path/to/save/dir/"
+	addTorrentTextInputs[AddTorrentSavePathInput].Placeholder = config.Currenti18n.SaveDirPlaceHolder
 	addTorrentTextInputs[AddTorrentSavePathInput].CharLimit = -1
 	addTorrentTextInputs[AddTorrentSavePathInput].Width = 50
 	addTorrentTextInputs[AddTorrentSavePathInput].Prompt = ""
 
 	moveTorrentPathTextInput := textinput.New()
-	moveTorrentPathTextInput.Placeholder = "/path/to/new/save/dir/"
+	moveTorrentPathTextInput.Placeholder = config.Currenti18n.NewSaveDirPlaceHolder
 	moveTorrentPathTextInput.Focus()
 	moveTorrentPathTextInput.CharLimit = -1
 	moveTorrentPathTextInput.Width = 50
@@ -162,9 +162,9 @@ func updateAddTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		case "tab":
 			m.AddingMagnetLink = !m.AddingMagnetLink
 			if m.AddingMagnetLink {
-				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = "magnet:..."
+				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = config.Currenti18n.MagnetLinkPlaceHolder
 			} else {
-				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = "/path/to/torrent/file"
+				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = config.Currenti18n.TorrentFilePath
 			}
 
 		case "enter":
@@ -281,9 +281,9 @@ func (m Model) View() string {
 		s = moveTorrentView(m)
 		break
 	case QuittingIota:
-		return "\n  See you later!\n\n"
+		return "\n  " + config.Currenti18n.SeeYouLater + "\n\n"
 	default:
-		return "\n  Error: Non existant view called.\n\n"
+		return "\n  " + config.Currenti18n.ErrorNonExistantView + "\n\n"
 	}
 	return indent.String("\n"+s+"\n\n", 2)
 }
@@ -291,23 +291,23 @@ func (m Model) View() string {
 func loadingView(m Model) string {
 	tpl := "osprey %s\n\n"
 	tpl += "%s\n\n"
-	tpl += "establishing connection to Porla backend.\n\n"
-	tpl += components.KeybindsHints([]string{"q: quit"})
+	tpl += config.Currenti18n.ConnectingToPorlaBackend + "\n\n"
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.QKeybind})
 
 	return fmt.Sprintf(tpl, config.Osprey_version, components.Progressbar(80, m.Progress))
 }
 
 func addTorrentView(m Model) string {
-	tpl := "Add torrent\n\n"
+	tpl := config.Currenti18n.AddTorrent + "\n\n"
 	if m.AddingMagnetLink {
-		tpl += "Magnet link\n"
+		tpl += config.Currenti18n.MagnetLink + "\n"
 	} else {
-		tpl += "Path to .torrent file\n"
+		tpl += config.Currenti18n.PathToTorrentFile + "\n"
 	}
 	tpl += m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].View() + "\n\n"
-	tpl += "Save path\n"
+	tpl += config.Currenti18n.SavePath + "\n"
 	tpl += m.AddTorrentTextInputs[AddTorrentSavePathInput].View() + "\n\n"
-	tpl += components.KeybindsHints([]string{"tab: toggle magnet/.torrent", "up/down: select", "enter: done", "esc: back", "q: quit"})
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.ToggleMagnetTorrentKeybind, config.Currenti18n.Keybinds.SelectReducedKeybind, config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind, config.Currenti18n.Keybinds.QKeybind})
 
 	return fmt.Sprintf(tpl)
 }
@@ -315,32 +315,32 @@ func addTorrentView(m Model) string {
 func removeTorrentView(m Model) string {
 	selectedTorrent := m.TorrentList.Torrents[m.Cursor]
 
-	tpl := fmt.Sprintf("Deleting %s\n\n", selectedTorrent.Name)
-	tpl += "Keep data?\n\n"
-	tpl += components.KeybindsHints([]string{"y: yes", "n: no", "esc: back"})
+	tpl := fmt.Sprintf(config.Currenti18n.DeletingTorrentName+"\n\n", selectedTorrent.Name)
+	tpl += config.Currenti18n.KeepDataQuestion + "\n\n"
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.YesKeybind, config.Currenti18n.Keybinds.NoKeybind, config.Currenti18n.Keybinds.EscKeybind})
 
 	return fmt.Sprintf(tpl)
 }
 
 func moveTorrentView(m Model) string {
 	selectedTorrent := m.TorrentList.Torrents[m.Cursor]
-	tpl := fmt.Sprintf("Moving %s\n\n", selectedTorrent.Name)
-	tpl += "New save path\n"
+	tpl := fmt.Sprintf(config.Currenti18n.MovingTorrentName+"\n\n", selectedTorrent.Name)
+	tpl += config.Currenti18n.NewSavePath + "\n"
 	tpl += m.MoveTorrentPathTextInput.View() + "\n\n"
-	tpl += components.KeybindsHints([]string{"enter: done", "esc: back", "q: quit"})
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind, config.Currenti18n.Keybinds.QKeybind})
 
 	return fmt.Sprintf(tpl)
 }
 
 func listView(m Model) string {
-	tpl := "%s active\n"
+	tpl := config.Currenti18n.TorrentsActive + "\n"
 	for index, torrent := range m.TorrentList.Torrents {
 		tpl += components.Torrent(torrent, index == m.Cursor)
 	}
-	tpl += "Page %d/%d (max %d results)\n\n"
-	tpl += components.KeybindsHints([]string{"j/k, up/down: select", "g/h, left/right: change page", "p: pause/resume torrent", "a: add new torrent", "r: remove torrent", "m: move torrent", "q: quit"})
+	tpl += config.Currenti18n.PageInfo + "\n\n"
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.SelectKeybind, config.Currenti18n.Keybinds.ChangePageKeybind, config.Currenti18n.Keybinds.PauseResumeKeybind, config.Currenti18n.Keybinds.AddTorrentKeybind, config.Currenti18n.Keybinds.RemoveTorrentKeybind, config.Currenti18n.Keybinds.MoveTorrentKeybind, config.Currenti18n.Keybinds.QKeybind})
 
-	return fmt.Sprintf(tpl, english.Plural(m.TorrentList.TorrentsTotal, "torrent", ""), m.Page+1, getPageCount(m), config.Config.PageSize)
+	return fmt.Sprintf(tpl, english.Plural(m.TorrentList.TorrentsTotal, config.Currenti18n.Torrent, ""), m.Page+1, getPageCount(m), config.Config.PageSize)
 }
 
 func getPageCount(m Model) int {

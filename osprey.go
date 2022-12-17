@@ -5,6 +5,7 @@ import (
 
 	"osprey/config"
 	"osprey/http"
+	"osprey/i18n"
 	"osprey/ui"
 	"osprey/utils"
 
@@ -17,6 +18,7 @@ func main() {
 	utils.CheckError(err)
 	err = yaml.Unmarshal(f, &config.Config)
 	utils.CheckError(err)
+	config.Currenti18n = i18n.LoadLanguage(config.Config.I18nLanguage)
 	http.InitHTTPClient()
 	p := tea.NewProgram(ui.InitialModel())
 	_, err = p.Run()

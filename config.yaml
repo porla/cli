@@ -1,3 +1,5 @@
+i18nlanguage: English
+
 pagesize: 10
 
 JSONRPCEndpointURL: http://127.0.0.1:1337/api/v1/jsonrpc
