@@ -25,6 +25,15 @@ const (
 	AddTorrentSavePathInput
 )
 
+const (
+	LoadingViewIota = iota
+	TorrentListIota
+	AddTorrentIota
+	RemoveTorrentIota
+	MoveTorrentIota
+	QuittingIota
+)
+
 func InitialModel() Model {
 	var addTorrentTextInputs []textinput.Model = make([]textinput.Model, 2)
 	addTorrentTextInputs[AddTorrentMagnetLinkInput] = textinput.New()
@@ -50,7 +59,7 @@ func InitialModel() Model {
 	return Model{
 		Cursor:                   0,
 		SubMenuCursor:            0,
-		CurrentView:              "TorrentList",
+		CurrentView:              TorrentListIota,
 		Progress:                 0.0,
 		TorrentList:              torrents.TorrentList{},
 		AddTorrentTextInputs:     addTorrentTextInputs,
@@ -62,7 +71,7 @@ func InitialModel() Model {
 type Model struct {
 	Cursor                   int
 	SubMenuCursor            int
-	CurrentView              string
+	CurrentView              int
 	Progress                 float64
 	TorrentList              torrents.TorrentList
 	AddTorrentTextInputs     []textinput.Model
@@ -98,13 +107,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Hand off the message and model to the appropriate update function for the
 	// appropriate view based on the current state.
 	switch m.CurrentView {
-	case "TorrentList":
+	case TorrentListIota:
 		return updateListView(msg, m)
-	case "AddTorrent":
+	case AddTorrentIota:
 		return updateAddTorrentView(msg, m)
-	case "RemoveTorrent":
+	case RemoveTorrentIota:
 		return updateRemoveTorrentView(msg, m)
-	case "MoveTorrent":
+	case MoveTorrentIota:
 		return updateMoveTorrentView(msg, m)
 	}
 	return m, nil
@@ -116,13 +125,13 @@ func updateRemoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			m.CurrentView = "TorrentList"
+			m.CurrentView = TorrentListIota
 		case "y":
 			http.DeleteTorrent(m.TorrentList.Torrents[m.Cursor], true)
-			m.CurrentView = "TorrentList"
+			m.CurrentView = TorrentListIota
 		case "n":
 			http.DeleteTorrent(m.TorrentList.Torrents[m.Cursor], false)
-			m.CurrentView = "TorrentList"
+			m.CurrentView = TorrentListIota
 		}
 	case tickMsg:
 		m.TorrentList = http.UpdateTorrentList()
@@ -138,7 +147,7 @@ func updateAddTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			m.CurrentView = "TorrentList"
+			m.CurrentView = TorrentListIota
 
 		case "up":
 			if m.SubMenuCursor > 0 {
@@ -162,7 +171,7 @@ func updateAddTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 				http.AddTorrent(m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Value(), m.AddTorrentTextInputs[AddTorrentSavePathInput].Value(), m.AddingMagnetLink)
 				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Reset()
 				m.AddTorrentTextInputs[AddTorrentSavePathInput].Reset()
-				m.CurrentView = "TorrentList"
+				m.CurrentView = TorrentListIota
 			}
 
 		}
@@ -190,12 +199,12 @@ func updateMoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			m.CurrentView = "TorrentList"
+			m.CurrentView = TorrentListIota
 
 		case "enter":
 			http.MoveTorrent(m.TorrentList.Torrents[m.Cursor], m.MoveTorrentPathTextInput.Value())
 			m.MoveTorrentPathTextInput.Reset()
-			m.CurrentView = "TorrentList"
+			m.CurrentView = TorrentListIota
 		}
 	case tickMsg:
 		m.TorrentList = http.UpdateTorrentList()
@@ -212,10 +221,10 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "a":
 			m.SubMenuCursor = 0
-			m.CurrentView = "AddTorrent"
+			m.CurrentView = AddTorrentIota
 		case "r":
 			if len(m.TorrentList.Torrents) != 0 {
-				m.CurrentView = "RemoveTorrent"
+				m.CurrentView = RemoveTorrentIota
 			}
 		case "p":
 			http.PauseResumeTorrent(m.TorrentList.Torrents[m.Cursor])
@@ -230,7 +239,7 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 			}
 		case "m":
 			m.MoveTorrentPathTextInput.SetValue(m.TorrentList.Torrents[m.Cursor].SavePath)
-			m.CurrentView = "MoveTorrent"
+			m.CurrentView = MoveTorrentIota
 		}
 	// Get updated info
 	case tickMsg:
@@ -244,22 +253,22 @@ func (m Model) View() string {
 	var s string
 	switch m.CurrentView {
 
-	case "Loading":
+	case LoadingViewIota:
 		s = loadingView(m)
 		break
-	case "TorrentList":
+	case TorrentListIota:
 		s = listView(m)
 		break
-	case "AddTorrent":
+	case AddTorrentIota:
 		s = addTorrentView(m)
 		break
-	case "RemoveTorrent":
+	case RemoveTorrentIota:
 		s = removeTorrentView(m)
 		break
-	case "MoveTorrent":
+	case MoveTorrentIota:
 		s = moveTorrentView(m)
 		break
-	case "Quitting":
+	case QuittingIota:
 		return "\n  See you later!\n\n"
 	default:
 		return "\n  Error: Non existant view called.\n\n"
