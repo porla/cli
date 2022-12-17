@@ -13,21 +13,17 @@ import (
 	"osprey/utils"
 	"strconv"
 	"strings"
+	"time"
 )
-
-var client *http.Client
-
-func InitHTTPClient() {
-	client = &http.Client{
-		CheckRedirect: redirectPolicyFunc,
-	}
-}
 
 func redirectPolicyFunc(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
-func UpdateTorrentList(page int) torrents.TorrentList {
+func UpdateTorrentList(page int) (torrents.TorrentList, int) {
+	client := &http.Client{
+		CheckRedirect: redirectPolicyFunc,
+	}
 	requestBody := []byte(`{
 		"jsonrpc": "2.0",
 		"method": "torrents.list",
@@ -45,10 +41,25 @@ func UpdateTorrentList(page int) torrents.TorrentList {
 	utils.CheckError(err)
 	var torrentListRequestResponse torrents.TorrentListRequestResponse
 	json.Unmarshal(body, &torrentListRequestResponse)
-	return torrentListRequestResponse.Result
+	updatedPageIndex := page
+	if len(torrentListRequestResponse.Result.Torrents) == 0 && page != 0 {
+		if page > 0 {
+			updatedPageIndex--
+		}
+	}
+	if torrentListRequestResponse.Error.Code == -2 {
+		if page > 0 {
+			time.Sleep(time.Millisecond * 5) // Prevent the server from interrupting the connection by adding a 25ms timeout
+			return UpdateTorrentList(page - 1)
+		}
+	}
+	return torrentListRequestResponse.Result, updatedPageIndex
 }
 
 func AddTorrent(magnetURI, savePath string, addingMagnetLink bool) {
+	client := &http.Client{
+		CheckRedirect: redirectPolicyFunc,
+	}
 	requestBody := []byte{}
 	if addingMagnetLink {
 		requestBody = []byte(`{
@@ -87,6 +98,9 @@ func AddTorrent(magnetURI, savePath string, addingMagnetLink bool) {
 }
 
 func DeleteTorrent(torrent torrents.Torrent, keepData bool) {
+	client := &http.Client{
+		CheckRedirect: redirectPolicyFunc,
+	}
 	removeDataJSON, err := json.Marshal(!keepData)
 	utils.CheckError(err)
 	requestBody := []byte(`{
@@ -105,6 +119,9 @@ func DeleteTorrent(torrent torrents.Torrent, keepData bool) {
 }
 
 func PauseResumeTorrent(torrent torrents.Torrent) {
+	client := &http.Client{
+		CheckRedirect: redirectPolicyFunc,
+	}
 	method := "torrents.pause"
 	if torrents.IsPaused(torrent.Flags) {
 		method = "torrents.resume"
@@ -124,6 +141,9 @@ func PauseResumeTorrent(torrent torrents.Torrent) {
 }
 
 func MoveTorrent(torrent torrents.Torrent, newPath string) {
+	client := &http.Client{
+		CheckRedirect: redirectPolicyFunc,
+	}
 	requestBody := []byte(`{
 		"jsonrpc": "2.0",
 		"method": "torrents.move",

@@ -213,6 +213,22 @@ func updateMoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func decrementPage(m *Model) {
+	if m.Page > 0 {
+		m.Page--
+		m.TorrentList, m.Page = http.UpdateTorrentList(m.Page)
+		m.Cursor = len(m.TorrentList.Torrents) - 1
+	}
+}
+
+func incrementPage(m *Model) {
+	if m.Page < getPageCount(*m)-1 {
+		m.Page++
+		m.TorrentList, m.Page = http.UpdateTorrentList(m.Page)
+		m.Cursor = 0
+	}
+}
+
 func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
@@ -230,37 +246,41 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		case "up", "k":
 			if m.Cursor > 0 {
 				m.Cursor--
+			} else {
+				decrementPage(&m)
 			}
 		case "down", "j":
 			if m.Cursor < len(m.TorrentList.Torrents)-1 {
 				m.Cursor++
+			} else {
+				incrementPage(&m)
 			}
 		case "left", "g":
-			if m.Page > 0 {
-				m.Page--
-			}
+			decrementPage(&m)
 		case "right", "h":
-			if m.Page < getPageCount(m)-1 {
-				m.Page++
-			}
+			incrementPage(&m)
 		case "m":
 			m.MoveTorrentPathTextInput.SetValue(m.TorrentList.Torrents[m.Cursor].SavePath)
 			m.CurrentView = MoveTorrentIota
 		}
 	// Get updated info
 	case tickMsg:
-		m.TorrentList = http.UpdateTorrentList(m.Page)
-		if m.Cursor > len(m.TorrentList.Torrents)-1 {
-			m.Cursor = len(m.TorrentList.Torrents) - 1
-		}
-		if m.Page > getPageCount(m)-1 {
+		m.TorrentList, m.Page = http.UpdateTorrentList(m.Page)
+		if (getPageCount(m)-1 != -1) && (m.Page > getPageCount(m)-1) {
 			m.Page = getPageCount(m) - 1
-		}
-		if m.Cursor < 0 {
-			m.Cursor = 0
+			m.TorrentList, m.Page = http.UpdateTorrentList(m.Page)
+			m.Cursor = len(m.TorrentList.Torrents) - 1
 		}
 		if m.Page < 0 {
 			m.Page = 0
+			m.TorrentList, m.Page = http.UpdateTorrentList(m.Page)
+			m.Cursor = 0
+		}
+		if m.Cursor > len(m.TorrentList.Torrents)-1 {
+			m.Cursor = len(m.TorrentList.Torrents) - 1
+		}
+		if m.Cursor < 0 {
+			m.Cursor = 0
 		}
 		return m, tick()
 	}

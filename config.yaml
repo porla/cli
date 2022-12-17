@@ -1,6 +1,6 @@
 i18nlanguage: English
 
-pagesize: 10
+pagesize: 2
 
 JSONRPCEndpointURL: http://127.0.0.1:1337/api/v1/jsonrpc
 secretkey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXUyJ9.eyJpYXQiOjE2NzEyNzY1NjcsImlzcyI6InBvcmxhIn0.pFTzk5PwsxdM7zHrTJM-0cPKSthkjuQLBWuNdTfndvE

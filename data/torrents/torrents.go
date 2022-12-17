@@ -29,9 +29,15 @@ type TorrentList struct {
 	TorrentsTotal int       `json:"torrents_total"`
 }
 
+type TorrentListRequestError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 type TorrentListRequestResponse struct {
-	JSONRPC string      `json:"jsonrpc"`
-	Result  TorrentList `json:"result"`
+	JSONRPC string                  `json:"jsonrpc"`
+	Result  TorrentList             `json:"result"`
+	Error   TorrentListRequestError `json:"error"`
 }
 
 func checkBit(flags uint64, bit uint64) bool {
