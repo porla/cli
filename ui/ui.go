@@ -256,6 +256,12 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		if m.Page > getPageCount(m)-1 {
 			m.Page = getPageCount(m) - 1
 		}
+		if m.Cursor < 0 {
+			m.Cursor = 0
+		}
+		if m.Page < 0 {
+			m.Page = 0
+		}
 		return m, tick()
 	}
 	return m, nil
