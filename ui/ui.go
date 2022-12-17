@@ -94,20 +94,28 @@ func frame() tea.Cmd {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tick()
+	var cmd tea.Cmd
+	cmd = tea.EnterAltScreen
+	return tea.Batch(tick(), cmd)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Make sure these keys always quit
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		k := msg.String()
-		if k == "q" || k == "ctrl+c" {
-			return m, tea.Quit
+		if m.CurrentView == AddTorrentIota || m.CurrentView == MoveTorrentIota {
+			if k == "ctrl+c" {
+				return m, tea.Quit
+			}
+		} else {
+			if k == "q" || k == "ctrl+c" {
+				return m, tea.Quit
+			}
 		}
 	}
 
 	if msg, ok := msg.(tea.WindowSizeMsg); ok {
-		newPageSize := (msg.Height - 8) / 4
+		newPageSize := (msg.Height - 10) / 4 // The torrent elements are 4 lines high and there are 10 lines not used for displaying torrents
 		if newPageSize != 0 {
 			config.Config.PageSize = newPageSize
 		}
@@ -340,7 +348,7 @@ func addTorrentView(m Model) string {
 	tpl += m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].View() + "\n\n"
 	tpl += config.Currenti18n.SavePath + "\n"
 	tpl += m.AddTorrentTextInputs[AddTorrentSavePathInput].View() + "\n\n"
-	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.ToggleMagnetTorrentKeybind, config.Currenti18n.Keybinds.SelectReducedKeybind, config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind, config.Currenti18n.Keybinds.QKeybind})
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.ToggleMagnetTorrentKeybind, config.Currenti18n.Keybinds.SelectReducedKeybind, config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind})
 
 	return fmt.Sprintf(tpl)
 }
@@ -360,20 +368,21 @@ func moveTorrentView(m Model) string {
 	tpl := fmt.Sprintf(config.Currenti18n.MovingTorrentName+"\n\n", selectedTorrent.Name)
 	tpl += config.Currenti18n.NewSavePath + "\n"
 	tpl += m.MoveTorrentPathTextInput.View() + "\n\n"
-	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind, config.Currenti18n.Keybinds.QKeybind})
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind})
 
 	return fmt.Sprintf(tpl)
 }
 
 func listView(m Model) string {
-	tpl := config.Currenti18n.TorrentsActive + "\n"
+	tpl := "osprey %s\n\n"
+	tpl += config.Currenti18n.TorrentsActive + "\n"
 	for index, torrent := range m.TorrentList.Torrents {
 		tpl += components.Torrent(torrent, index == m.Cursor)
 	}
 	tpl += config.Currenti18n.PageInfo + "\n\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.SelectKeybind, config.Currenti18n.Keybinds.ChangePageKeybind, config.Currenti18n.Keybinds.PauseResumeKeybind, config.Currenti18n.Keybinds.AddTorrentKeybind, config.Currenti18n.Keybinds.RemoveTorrentKeybind, config.Currenti18n.Keybinds.MoveTorrentKeybind, config.Currenti18n.Keybinds.QKeybind})
 
-	return fmt.Sprintf(tpl, english.Plural(m.TorrentList.TorrentsTotal, config.Currenti18n.Torrent, ""), m.Page+1, getPageCount(m), config.Config.PageSize)
+	return fmt.Sprintf(tpl, config.Osprey_version, english.Plural(m.TorrentList.TorrentsTotal, config.Currenti18n.Torrent, ""), m.Page+1, getPageCount(m), config.Config.PageSize)
 }
 
 func getPageCount(m Model) int {
