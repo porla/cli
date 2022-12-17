@@ -106,6 +106,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if msg, ok := msg.(tea.WindowSizeMsg); ok {
+		newPageSize := (msg.Height - 8) / 4
+		if newPageSize != 0 {
+			config.Config.PageSize = newPageSize
+		}
+	}
+
 	// Hand off the message and model to the appropriate update function for the
 	// appropriate view based on the current state.
 	switch m.CurrentView {
