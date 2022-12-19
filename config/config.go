@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	Osprey_version = "v0.0.1"
+	Osprey_version = "v0.0.2"
 	ConfigFilePath = "./config.yaml"
 	Config         ConfigType
 )

@@ -9,6 +9,10 @@ import (
 )
 
 const (
+	HighlightedColor = "212"
+)
+
+const (
 	ProgressBarWidth  = 71
 	ProgressFullChar  = "█"
 	ProgressEmptyChar = "░"

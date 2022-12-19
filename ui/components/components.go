@@ -13,7 +13,7 @@ import (
 )
 
 func VersionNumber() string {
-	return "osprey " + config.Osprey_version
+	return "osprey " + styling.ColorFg(config.Osprey_version, styling.HighlightedColor)
 }
 
 func Checkbox(label string, checked bool, selected bool) string {
@@ -22,7 +22,7 @@ func Checkbox(label string, checked bool, selected bool) string {
 		s = "[x] " + label
 	}
 	if selected {
-		return styling.ColorFg(s, "212")
+		return styling.ColorFg(s, styling.HighlightedColor)
 	}
 	return s
 }
@@ -46,7 +46,7 @@ func Torrent(torrent torrents.Torrent, selected bool) string {
 	s := ""
 	torrentNameString := fmt.Sprintf("- %-9s %s\n", fmt.Sprintf("[%s]", torrents.StateString(torrent)), torrent.Name)
 	if selected {
-		s += styling.ColorFg(torrentNameString, "212")
+		s += styling.ColorFg(torrentNameString, styling.HighlightedColor)
 	} else {
 		s += styling.ColorFg(torrentNameString, torrents.StateColor(torrent))
 	}
