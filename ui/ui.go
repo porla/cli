@@ -46,20 +46,19 @@ const (
 )
 
 func InitialModel() Model {
+	// Add torrent text inputs
 	var addTorrentTextInputs []textinput.Model = make([]textinput.Model, 2)
-	addTorrentTextInputs[AddTorrentMagnetLinkInput] = textinput.New()
+	for i := range addTorrentTextInputs {
+		addTorrentTextInputs[i] = textinput.New()
+		addTorrentTextInputs[i].CharLimit = -1
+		addTorrentTextInputs[i].Width = 50
+		addTorrentTextInputs[i].Prompt = ""
+	}
 	addTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = config.Currenti18n.MagnetLinkPlaceHolder
 	addTorrentTextInputs[AddTorrentMagnetLinkInput].Focus()
-	addTorrentTextInputs[AddTorrentMagnetLinkInput].CharLimit = -1
-	addTorrentTextInputs[AddTorrentMagnetLinkInput].Width = 50
-	addTorrentTextInputs[AddTorrentMagnetLinkInput].Prompt = ""
-
-	addTorrentTextInputs[AddTorrentSavePathInput] = textinput.New()
 	addTorrentTextInputs[AddTorrentSavePathInput].Placeholder = config.Currenti18n.SaveDirPlaceHolder
-	addTorrentTextInputs[AddTorrentSavePathInput].CharLimit = -1
-	addTorrentTextInputs[AddTorrentSavePathInput].Width = 50
-	addTorrentTextInputs[AddTorrentSavePathInput].Prompt = ""
 
+	// Move torrent text input
 	moveTorrentPathTextInput := textinput.New()
 	moveTorrentPathTextInput.Placeholder = config.Currenti18n.NewSaveDirPlaceHolder
 	moveTorrentPathTextInput.Focus()
@@ -67,30 +66,18 @@ func InitialModel() Model {
 	moveTorrentPathTextInput.Width = 50
 	moveTorrentPathTextInput.Prompt = ""
 
+	// TorrentSettings text inputs
 	var torrentSettingsTextInputs []textinput.Model = make([]textinput.Model, 4)
-	torrentSettingsTextInputs[TorrentSettingsDownloadLimitInput] = textinput.New()
+	for i := range torrentSettingsTextInputs {
+		torrentSettingsTextInputs[i] = textinput.New()
+		torrentSettingsTextInputs[i].CharLimit = -1
+		torrentSettingsTextInputs[i].Width = 50
+		torrentSettingsTextInputs[i].Prompt = ""
+	}
 	torrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].Placeholder = "-1"
-	torrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].CharLimit = -1
-	torrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].Width = 50
-	torrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].Prompt = ""
-
-	torrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput] = textinput.New()
 	torrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].Placeholder = "16777215"
-	torrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].CharLimit = -1
-	torrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].Width = 50
-	torrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].Prompt = ""
-
-	torrentSettingsTextInputs[TorrentSettingsMaxUploadsInput] = textinput.New()
 	torrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].Placeholder = "1000"
-	torrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].CharLimit = -1
-	torrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].Width = 50
-	torrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].Prompt = ""
-
-	torrentSettingsTextInputs[TorrentSettingsUploadLimitInput] = textinput.New()
 	torrentSettingsTextInputs[TorrentSettingsUploadLimitInput].Placeholder = "-1"
-	torrentSettingsTextInputs[TorrentSettingsUploadLimitInput].CharLimit = -1
-	torrentSettingsTextInputs[TorrentSettingsUploadLimitInput].Width = 50
-	torrentSettingsTextInputs[TorrentSettingsUploadLimitInput].Prompt = ""
 
 	return Model{
 		Page:           0,
