@@ -456,14 +456,14 @@ func loadingView(m Model) string {
 }
 
 func addTorrentView(m Model) string {
-	tpl := config.Currenti18n.AddTorrent + "\n\n"
+	tpl := styling.ColorFg(config.Currenti18n.AddTorrent, styling.SecondaryColor) + "\n\n"
 	if m.AddTorrentSubMenuState.AddingMagnetLink {
-		tpl += config.Currenti18n.MagnetLink + "\n"
+		tpl += styling.ColorFg(config.Currenti18n.MagnetLink, styling.SecondaryColor) + "\n"
 	} else {
-		tpl += config.Currenti18n.PathToTorrentFile + "\n"
+		tpl += styling.ColorFg(config.Currenti18n.PathToTorrentFile, styling.SecondaryColor) + "\n"
 	}
 	tpl += m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentMagnetLinkInput].View() + "\n\n"
-	tpl += config.Currenti18n.SavePath + "\n"
+	tpl += styling.ColorFg(config.Currenti18n.SavePath, styling.SecondaryColor) + "\n"
 	tpl += m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentSavePathInput].View() + "\n\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.ToggleMagnetTorrentKeybind, config.Currenti18n.Keybinds.SelectReducedKeybind, config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind})
 
@@ -473,7 +473,7 @@ func addTorrentView(m Model) string {
 func removeTorrentView(m Model) string {
 	selectedTorrent := m.TorrentList.Torrents[m.Cursor]
 
-	tpl := fmt.Sprintf(config.Currenti18n.DeletingTorrentName+"\n\n", selectedTorrent.Name)
+	tpl := fmt.Sprintf(styling.ColorFg(config.Currenti18n.DeletingTorrentName, styling.SecondaryColor)+"\n\n", selectedTorrent.Name)
 	tpl += config.Currenti18n.KeepDataQuestion + "\n\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.YesKeybind, config.Currenti18n.Keybinds.NoKeybind, config.Currenti18n.Keybinds.EscKeybind})
 
@@ -482,8 +482,8 @@ func removeTorrentView(m Model) string {
 
 func moveTorrentView(m Model) string {
 	selectedTorrent := m.TorrentList.Torrents[m.Cursor]
-	tpl := fmt.Sprintf(config.Currenti18n.MovingTorrentName+"\n\n", selectedTorrent.Name)
-	tpl += config.Currenti18n.NewSavePath + "\n"
+	tpl := fmt.Sprintf(styling.ColorFg(config.Currenti18n.MovingTorrentName, styling.SecondaryColor)+"\n\n", selectedTorrent.Name)
+	tpl += styling.ColorFg(config.Currenti18n.NewSavePath, styling.SecondaryColor) + "\n"
 	tpl += m.MoveTorrentSubMenuState.MoveTorrentPathTextInput.View() + "\n\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind})
 
@@ -492,17 +492,17 @@ func moveTorrentView(m Model) string {
 
 func torrentSettingsView(m Model) string {
 	selectedTorrent := m.TorrentList.Torrents[m.Cursor]
-	tpl := fmt.Sprintf(config.Currenti18n.TorrentSettingsForTorrentName+"\n\n", selectedTorrent.Name)
+	tpl := fmt.Sprintf(styling.ColorFg(config.Currenti18n.TorrentSettingsForTorrentName, styling.SecondaryColor)+"\n\n", selectedTorrent.Name)
 	tpl += components.Checkbox(config.Currenti18n.AutomaticallyManaged, m.TorrentSettingsSubMenuState.TorrentIsAutomaticallyManaged, m.SubMenuCursor == 0) + "\n"
 	tpl += components.Checkbox(config.Currenti18n.SequentialDownload, m.TorrentSettingsSubMenuState.TorrentIsSequenciallyDownloading, m.SubMenuCursor == 1) + "\n\n"
-	tpl += config.Currenti18n.DownloadLimit + "\n"
+	tpl += styling.ColorFg(config.Currenti18n.DownloadLimit, styling.SecondaryColor) + "\n"
 	tpl += m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].View() + "\n"
 	tpl += styling.Subtle(config.Currenti18n.DownloadLimitHint + "\n\n")
-	tpl += config.Currenti18n.MaxConnections + "\n"
+	tpl += styling.ColorFg(config.Currenti18n.MaxConnections, styling.SecondaryColor) + "\n"
 	tpl += m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].View() + "\n\n"
-	tpl += config.Currenti18n.MaxUploads + "\n"
+	tpl += styling.ColorFg(config.Currenti18n.MaxUploads, styling.SecondaryColor) + "\n"
 	tpl += m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].View() + "\n\n"
-	tpl += config.Currenti18n.UploadLimit + "\n"
+	tpl += styling.ColorFg(config.Currenti18n.UploadLimit, styling.SecondaryColor) + "\n"
 	tpl += m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsUploadLimitInput].View() + "\n\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.SelectReducedKeybind, config.Currenti18n.Keybinds.ToggleOptionKeybind, config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind})
 
@@ -515,7 +515,7 @@ func listView(m Model) string {
 	for index, torrent := range m.TorrentList.Torrents {
 		tpl += components.Torrent(torrent, index == m.Cursor)
 	}
-	tpl += config.Currenti18n.PageInfo + "\n\n"
+	tpl += styling.Subtle(config.Currenti18n.PageInfo) + "\n\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.SelectKeybind, config.Currenti18n.Keybinds.ChangePageKeybind, config.Currenti18n.Keybinds.PauseResumeKeybind, config.Currenti18n.Keybinds.AddTorrentKeybind}) + "\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.RemoveTorrentKeybind, config.Currenti18n.Keybinds.MoveTorrentKeybind, config.Currenti18n.Keybinds.TorrentSettingsKeybind, config.Currenti18n.Keybinds.QKeybind})
 	return fmt.Sprintf(tpl, english.Plural(m.TorrentList.TorrentsTotal, config.Currenti18n.Torrent, ""), m.Page+1, getPageCount(m), config.Config.PageSize)

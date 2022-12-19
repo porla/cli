@@ -7,6 +7,7 @@ import (
 	"osprey/data/torrents"
 	"osprey/ui/styling"
 	"strings"
+	"time"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/muesli/termenv"
@@ -50,7 +51,15 @@ func Torrent(torrent torrents.Torrent, selected bool) string {
 	} else {
 		s += styling.ColorFg(torrentNameString, torrents.StateColor(torrent))
 	}
-	s += fmt.Sprintf("↓ %-9s  ↑ %-9s  ↔ %-9s  P %-6d  S %-6d\n", humanize.Bytes(torrent.DownloadRate)+"/s", humanize.Bytes(torrent.UploadRate)+"/s", humanize.Bytes(torrent.Size), torrent.NumPeers, torrent.NumSeeds)
+	torrentStatus := fmt.Sprintf("↓ %-9s  ↑ %-9s  ↔ %-9s  P %-6d  S %-6d", humanize.Bytes(torrent.DownloadRate)+"/s", humanize.Bytes(torrent.UploadRate)+"/s", humanize.Bytes(torrent.Size), torrent.NumPeers, torrent.NumSeeds)
+	if torrent.State == 3 {
+		if torrent.DownloadRate != 0 {
+			torrentStatus += fmt.Sprintf("  E %-6s", time.Duration(((1.0 - torrent.Progress) * float64(torrent.Size) * 1000000000.0 / float64(torrent.DownloadRate))).Round(time.Second))
+		} else {
+			torrentStatus += fmt.Sprintf("  E %-6s", "∞")
+		}
+	}
+	s += styling.ColorFg(torrentStatus, styling.SecondaryColor) + "\n"
 	s += Progressbar(20, torrent.Progress) + "\n"
 
 	s += "\n"

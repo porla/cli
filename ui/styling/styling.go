@@ -10,6 +10,7 @@ import (
 
 const (
 	HighlightedColor = "212"
+	SecondaryColor   = "225"
 )
 
 const (
