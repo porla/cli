@@ -9,3 +9,13 @@ func CheckError(err error) {
 		log.Fatal(err)
 	}
 }
+
+func Contains(s []int, test int) bool {
+	for _, v := range s {
+		if v == test {
+			return true
+		}
+	}
+
+	return false
+}

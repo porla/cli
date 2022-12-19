@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 	"math"
+	"osprey/config"
 	"osprey/data/torrents"
 	"osprey/ui/styling"
 	"strings"
@@ -11,11 +12,19 @@ import (
 	"github.com/muesli/termenv"
 )
 
-func Checkbox(label string, checked bool) string {
+func VersionNumber() string {
+	return "osprey " + config.Osprey_version
+}
+
+func Checkbox(label string, checked bool, selected bool) string {
+	s := fmt.Sprintf("[ ] %s", label)
 	if checked {
-		return styling.ColorFg("[x] "+label, "212")
+		s = "[x] " + label
 	}
-	return fmt.Sprintf("[ ] %s", label)
+	if selected {
+		return styling.ColorFg(s, "212")
+	}
+	return s
 }
 
 func Progressbar(width int, percent float64) string {

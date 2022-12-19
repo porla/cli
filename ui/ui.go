@@ -2,12 +2,15 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"osprey/config"
 	"osprey/data/torrents"
 	"osprey/http"
 	"osprey/ui/components"
+	"osprey/ui/styling"
+	"osprey/utils"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -21,17 +24,25 @@ type (
 )
 
 const (
-	AddTorrentMagnetLinkInput = iota
-	AddTorrentSavePathInput
-)
-
-const (
 	LoadingViewIota = iota
 	TorrentListIota
 	AddTorrentIota
 	RemoveTorrentIota
 	MoveTorrentIota
+	TorrentSettingsIota
 	QuittingIota
+)
+
+const (
+	AddTorrentMagnetLinkInput = iota
+	AddTorrentSavePathInput
+)
+
+const (
+	TorrentSettingsDownloadLimitInput = iota
+	TorrentSettingsMaxConnectionsInput
+	TorrentSettingsMaxUploadsInput
+	TorrentSettingsUploadLimitInput
 )
 
 func InitialModel() Model {
@@ -56,29 +67,80 @@ func InitialModel() Model {
 	moveTorrentPathTextInput.Width = 50
 	moveTorrentPathTextInput.Prompt = ""
 
+	var torrentSettingsTextInputs []textinput.Model = make([]textinput.Model, 4)
+	torrentSettingsTextInputs[TorrentSettingsDownloadLimitInput] = textinput.New()
+	torrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].Placeholder = "-1"
+	torrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].CharLimit = -1
+	torrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].Width = 50
+	torrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].Prompt = ""
+
+	torrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput] = textinput.New()
+	torrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].Placeholder = "16777215"
+	torrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].CharLimit = -1
+	torrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].Width = 50
+	torrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].Prompt = ""
+
+	torrentSettingsTextInputs[TorrentSettingsMaxUploadsInput] = textinput.New()
+	torrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].Placeholder = "1000"
+	torrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].CharLimit = -1
+	torrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].Width = 50
+	torrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].Prompt = ""
+
+	torrentSettingsTextInputs[TorrentSettingsUploadLimitInput] = textinput.New()
+	torrentSettingsTextInputs[TorrentSettingsUploadLimitInput].Placeholder = "-1"
+	torrentSettingsTextInputs[TorrentSettingsUploadLimitInput].CharLimit = -1
+	torrentSettingsTextInputs[TorrentSettingsUploadLimitInput].Width = 50
+	torrentSettingsTextInputs[TorrentSettingsUploadLimitInput].Prompt = ""
+
 	return Model{
-		Page:                     0,
-		Cursor:                   0,
-		SubMenuCursor:            0,
-		CurrentView:              TorrentListIota,
-		Progress:                 0.0,
-		TorrentList:              torrents.TorrentList{},
-		AddTorrentTextInputs:     addTorrentTextInputs,
-		AddingMagnetLink:         true,
-		MoveTorrentPathTextInput: moveTorrentPathTextInput,
+		Page:           0,
+		Cursor:         0,
+		SubMenuCursor:  0,
+		SubMenuEntries: 0,
+		CurrentView:    TorrentListIota,
+		Progress:       0.0,
+		TorrentList:    torrents.TorrentList{},
+		AddTorrentSubMenuState: AddTorrentSubMenuState{
+			AddTorrentTextInputs: addTorrentTextInputs,
+			AddingMagnetLink:     true,
+		},
+		MoveTorrentSubMenuState: MoveTorrentSubMenuState{
+			MoveTorrentPathTextInput: moveTorrentPathTextInput,
+		},
+		TorrentSettingsSubMenuState: TorrentSettingsSubMenuState{
+			TorrentIsAutomaticallyManaged:    false,
+			TorrentIsSequenciallyDownloading: false,
+			TorrentSettingsTextInputs:        torrentSettingsTextInputs,
+		},
 	}
 }
 
-type Model struct {
-	Page                     int
-	Cursor                   int
-	SubMenuCursor            int
-	CurrentView              int
-	Progress                 float64
-	TorrentList              torrents.TorrentList
-	AddTorrentTextInputs     []textinput.Model
-	AddingMagnetLink         bool
+type TorrentSettingsSubMenuState struct {
+	TorrentIsAutomaticallyManaged    bool
+	TorrentIsSequenciallyDownloading bool
+	TorrentSettingsTextInputs        []textinput.Model
+}
+
+type AddTorrentSubMenuState struct {
+	AddTorrentTextInputs []textinput.Model
+	AddingMagnetLink     bool
+}
+
+type MoveTorrentSubMenuState struct {
 	MoveTorrentPathTextInput textinput.Model
+}
+
+type Model struct {
+	Page                        int
+	Cursor                      int
+	SubMenuCursor               int
+	SubMenuEntries              int
+	CurrentView                 int
+	Progress                    float64
+	TorrentList                 torrents.TorrentList
+	AddTorrentSubMenuState      AddTorrentSubMenuState
+	MoveTorrentSubMenuState     MoveTorrentSubMenuState
+	TorrentSettingsSubMenuState TorrentSettingsSubMenuState
 }
 
 func tick() tea.Cmd {
@@ -103,9 +165,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Make sure these keys always quit
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		k := msg.String()
-		if m.CurrentView == AddTorrentIota || m.CurrentView == MoveTorrentIota {
-			if k == "ctrl+c" {
+		// Check if is a submenu
+		if utils.Contains([]int{AddTorrentIota, MoveTorrentIota, RemoveTorrentIota, TorrentSettingsIota}, m.CurrentView) {
+			switch k {
+			case "ctrl+c":
 				return m, tea.Quit
+			case "esc":
+				m.CurrentView = TorrentListIota
+			case "up":
+				if m.SubMenuCursor > 0 {
+					m.SubMenuCursor--
+				}
+			case "down":
+				if m.SubMenuCursor < m.SubMenuEntries-1 {
+					m.SubMenuCursor++
+				}
 			}
 		} else {
 			if k == "q" || k == "ctrl+c" {
@@ -115,7 +189,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if msg, ok := msg.(tea.WindowSizeMsg); ok {
-		newPageSize := (msg.Height - 10) / 4 // The torrent elements are 4 lines high and there are 10 lines not used for displaying torrents
+		newPageSize := (msg.Height - 11) / 4 // The torrent elements are 4 lines high and there are 11 lines not used for displaying torrents
 		if newPageSize != 0 {
 			config.Config.PageSize = newPageSize
 		}
@@ -132,6 +206,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return updateRemoveTorrentView(msg, m)
 	case MoveTorrentIota:
 		return updateMoveTorrentView(msg, m)
+	case TorrentSettingsIota:
+		return updateTorrentSettingsView(msg, m)
 	}
 	return m, nil
 }
@@ -141,8 +217,6 @@ func updateRemoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc":
-			m.CurrentView = TorrentListIota
 		case "y":
 			http.DeleteTorrent(m.TorrentList.Torrents[m.Cursor], true)
 			m.CurrentView = TorrentListIota
@@ -157,52 +231,40 @@ func updateRemoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 }
 
 func updateAddTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd = make([]tea.Cmd, len(m.AddTorrentTextInputs))
+	var cmds []tea.Cmd = make([]tea.Cmd, len(m.AddTorrentSubMenuState.AddTorrentTextInputs))
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc":
-			m.CurrentView = TorrentListIota
-
-		case "up":
-			if m.SubMenuCursor > 0 {
-				m.SubMenuCursor--
-			}
-		case "down":
-			if m.SubMenuCursor < len(m.AddTorrentTextInputs)-1 {
-				m.SubMenuCursor++
-			}
-
 		case "tab":
-			m.AddingMagnetLink = !m.AddingMagnetLink
-			if m.AddingMagnetLink {
-				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = config.Currenti18n.MagnetLinkPlaceHolder
+			m.AddTorrentSubMenuState.AddingMagnetLink = !m.AddTorrentSubMenuState.AddingMagnetLink
+			if m.AddTorrentSubMenuState.AddingMagnetLink {
+				m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = config.Currenti18n.MagnetLinkPlaceHolder
 			} else {
-				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = config.Currenti18n.TorrentFilePath
+				m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Placeholder = config.Currenti18n.TorrentFilePath
 			}
 
 		case "enter":
-			if (m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Value() != "") && (m.AddTorrentTextInputs[AddTorrentSavePathInput].Value() != "") {
-				http.AddTorrent(m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Value(), m.AddTorrentTextInputs[AddTorrentSavePathInput].Value(), m.AddingMagnetLink)
-				m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Reset()
-				m.AddTorrentTextInputs[AddTorrentSavePathInput].Reset()
+			if (m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Value() != "") && (m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentSavePathInput].Value() != "") {
+				http.AddTorrent(m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Value(), m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentSavePathInput].Value(), m.AddTorrentSubMenuState.AddingMagnetLink)
+				m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentMagnetLinkInput].Reset()
+				m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentSavePathInput].Reset()
 				m.CurrentView = TorrentListIota
 			}
 
 		}
 
-		for i := range m.AddTorrentTextInputs {
-			m.AddTorrentTextInputs[i].Blur()
+		for i := range m.AddTorrentSubMenuState.AddTorrentTextInputs {
+			m.AddTorrentSubMenuState.AddTorrentTextInputs[i].Blur()
 		}
-		m.AddTorrentTextInputs[m.SubMenuCursor].Focus()
+		m.AddTorrentSubMenuState.AddTorrentTextInputs[m.SubMenuCursor].Focus()
 
 	case tickMsg:
 		return m, tick()
 	}
 
-	for i := range m.AddTorrentTextInputs {
-		m.AddTorrentTextInputs[i], cmds[i] = m.AddTorrentTextInputs[i].Update(msg)
+	for i := range m.AddTorrentSubMenuState.AddTorrentTextInputs {
+		m.AddTorrentSubMenuState.AddTorrentTextInputs[i], cmds[i] = m.AddTorrentSubMenuState.AddTorrentTextInputs[i].Update(msg)
 	}
 	return m, tea.Batch(cmds...)
 }
@@ -213,19 +275,59 @@ func updateMoveTorrentView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc":
-			m.CurrentView = TorrentListIota
 
 		case "enter":
-			http.MoveTorrent(m.TorrentList.Torrents[m.Cursor], m.MoveTorrentPathTextInput.Value())
-			m.MoveTorrentPathTextInput.Reset()
+			http.MoveTorrent(m.TorrentList.Torrents[m.Cursor], m.MoveTorrentSubMenuState.MoveTorrentPathTextInput.Value())
+			m.MoveTorrentSubMenuState.MoveTorrentPathTextInput.Reset()
 			m.CurrentView = TorrentListIota
 		}
 	case tickMsg:
 		return m, tick()
 	}
-	m.MoveTorrentPathTextInput, cmd = m.MoveTorrentPathTextInput.Update(msg)
+	m.MoveTorrentSubMenuState.MoveTorrentPathTextInput, cmd = m.MoveTorrentSubMenuState.MoveTorrentPathTextInput.Update(msg)
 	return m, cmd
+}
+
+func updateTorrentSettingsView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd = make([]tea.Cmd, len(m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs))
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case " ":
+			if m.SubMenuCursor == 0 {
+				m.TorrentSettingsSubMenuState.TorrentIsAutomaticallyManaged = !m.TorrentSettingsSubMenuState.TorrentIsAutomaticallyManaged
+			}
+			if m.SubMenuCursor == 1 {
+				m.TorrentSettingsSubMenuState.TorrentIsSequenciallyDownloading = !m.TorrentSettingsSubMenuState.TorrentIsSequenciallyDownloading
+			}
+		case "enter":
+			http.SetTorrentProperties(m.TorrentList.Torrents[m.Cursor], torrents.TorrentPropertiesSetData{
+				IsAutomaticallyManaged:    m.TorrentSettingsSubMenuState.TorrentIsAutomaticallyManaged,
+				IsSequenciallyDownloading: m.TorrentSettingsSubMenuState.TorrentIsSequenciallyDownloading,
+				DownloadLimit:             m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].Value(),
+				MaxConnections:            m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].Value(),
+				MaxUploads:                m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].Value(),
+				UploadLimit:               m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsUploadLimitInput].Value(),
+			})
+			m.CurrentView = TorrentListIota
+		}
+
+		for i := range m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs {
+			m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[i].Blur()
+		}
+		if m.SubMenuCursor > 1 {
+			m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[m.SubMenuCursor-2].Focus()
+		}
+
+	case tickMsg:
+		return m, tick()
+	}
+
+	for i := range m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs {
+		m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[i], cmds[i] = m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[i].Update(msg)
+	}
+	return m, tea.Batch(cmds...)
 }
 
 func decrementPage(m *Model) {
@@ -246,11 +348,11 @@ func incrementPage(m *Model) {
 
 func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "a":
 			m.SubMenuCursor = 0
+			m.SubMenuEntries = len(m.AddTorrentSubMenuState.AddTorrentTextInputs)
 			m.CurrentView = AddTorrentIota
 		case "r":
 			if len(m.TorrentList.Torrents) != 0 {
@@ -275,8 +377,26 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 		case "right", "h":
 			incrementPage(&m)
 		case "m":
-			m.MoveTorrentPathTextInput.SetValue(m.TorrentList.Torrents[m.Cursor].SavePath)
-			m.CurrentView = MoveTorrentIota
+			if len(m.TorrentList.Torrents) != 0 {
+				m.MoveTorrentSubMenuState.MoveTorrentPathTextInput.SetValue(m.TorrentList.Torrents[m.Cursor].SavePath)
+				m.CurrentView = MoveTorrentIota
+			}
+		case "s":
+			if len(m.TorrentList.Torrents) != 0 {
+				torrentProperties := http.GetTorrentProperties(m.TorrentList.Torrents[m.Cursor])
+				m.TorrentSettingsSubMenuState.TorrentIsAutomaticallyManaged = torrents.IsAutoManaged(uint64(torrentProperties.Flags))
+				m.TorrentSettingsSubMenuState.TorrentIsSequenciallyDownloading = torrents.IsSequenciallyDownloading(uint64(torrentProperties.Flags))
+				m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].SetValue(strconv.Itoa(torrentProperties.DownloadLimit))
+				m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsUploadLimitInput].SetValue(strconv.Itoa(torrentProperties.UploadLimit))
+				m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].SetValue(strconv.Itoa(torrentProperties.MaxConnections))
+				m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].SetValue(strconv.Itoa(torrentProperties.MaxUploads))
+				for i := range m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs {
+					m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[i].Blur()
+				}
+				m.SubMenuCursor = 0
+				m.SubMenuEntries = 2 + len(m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs)
+				m.CurrentView = TorrentSettingsIota
+			}
 		}
 	// Get updated info
 	case tickMsg:
@@ -308,19 +428,16 @@ func (m Model) View() string {
 
 	case LoadingViewIota:
 		s = loadingView(m)
-		break
 	case TorrentListIota:
 		s = listView(m)
-		break
 	case AddTorrentIota:
 		s = addTorrentView(m)
-		break
 	case RemoveTorrentIota:
 		s = removeTorrentView(m)
-		break
 	case MoveTorrentIota:
 		s = moveTorrentView(m)
-		break
+	case TorrentSettingsIota:
+		s = torrentSettingsView(m)
 	case QuittingIota:
 		return "\n  " + config.Currenti18n.SeeYouLater + "\n\n"
 	default:
@@ -330,24 +447,24 @@ func (m Model) View() string {
 }
 
 func loadingView(m Model) string {
-	tpl := "osprey %s\n\n"
+	tpl := components.VersionNumber() + "\n\n"
 	tpl += "%s\n\n"
 	tpl += config.Currenti18n.ConnectingToPorlaBackend + "\n\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.QKeybind})
 
-	return fmt.Sprintf(tpl, config.Osprey_version, components.Progressbar(80, m.Progress))
+	return fmt.Sprintf(tpl, components.Progressbar(80, m.Progress))
 }
 
 func addTorrentView(m Model) string {
 	tpl := config.Currenti18n.AddTorrent + "\n\n"
-	if m.AddingMagnetLink {
+	if m.AddTorrentSubMenuState.AddingMagnetLink {
 		tpl += config.Currenti18n.MagnetLink + "\n"
 	} else {
 		tpl += config.Currenti18n.PathToTorrentFile + "\n"
 	}
-	tpl += m.AddTorrentTextInputs[AddTorrentMagnetLinkInput].View() + "\n\n"
+	tpl += m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentMagnetLinkInput].View() + "\n\n"
 	tpl += config.Currenti18n.SavePath + "\n"
-	tpl += m.AddTorrentTextInputs[AddTorrentSavePathInput].View() + "\n\n"
+	tpl += m.AddTorrentSubMenuState.AddTorrentTextInputs[AddTorrentSavePathInput].View() + "\n\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.ToggleMagnetTorrentKeybind, config.Currenti18n.Keybinds.SelectReducedKeybind, config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind})
 
 	return fmt.Sprintf(tpl)
@@ -367,22 +484,41 @@ func moveTorrentView(m Model) string {
 	selectedTorrent := m.TorrentList.Torrents[m.Cursor]
 	tpl := fmt.Sprintf(config.Currenti18n.MovingTorrentName+"\n\n", selectedTorrent.Name)
 	tpl += config.Currenti18n.NewSavePath + "\n"
-	tpl += m.MoveTorrentPathTextInput.View() + "\n\n"
+	tpl += m.MoveTorrentSubMenuState.MoveTorrentPathTextInput.View() + "\n\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind})
 
 	return fmt.Sprintf(tpl)
 }
 
+func torrentSettingsView(m Model) string {
+	selectedTorrent := m.TorrentList.Torrents[m.Cursor]
+	tpl := fmt.Sprintf(config.Currenti18n.TorrentSettingsForTorrentName+"\n\n", selectedTorrent.Name)
+	tpl += components.Checkbox(config.Currenti18n.AutomaticallyManaged, m.TorrentSettingsSubMenuState.TorrentIsAutomaticallyManaged, m.SubMenuCursor == 0) + "\n"
+	tpl += components.Checkbox(config.Currenti18n.SequentialDownload, m.TorrentSettingsSubMenuState.TorrentIsSequenciallyDownloading, m.SubMenuCursor == 1) + "\n\n"
+	tpl += config.Currenti18n.DownloadLimit + "\n"
+	tpl += m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsDownloadLimitInput].View() + "\n"
+	tpl += styling.Subtle(config.Currenti18n.DownloadLimitHint + "\n\n")
+	tpl += config.Currenti18n.MaxConnections + "\n"
+	tpl += m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsMaxConnectionsInput].View() + "\n\n"
+	tpl += config.Currenti18n.MaxUploads + "\n"
+	tpl += m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsMaxUploadsInput].View() + "\n\n"
+	tpl += config.Currenti18n.UploadLimit + "\n"
+	tpl += m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs[TorrentSettingsUploadLimitInput].View() + "\n\n"
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.SelectReducedKeybind, config.Currenti18n.Keybinds.ToggleOptionKeybind, config.Currenti18n.Keybinds.DoneKeybind, config.Currenti18n.Keybinds.EscKeybind})
+
+	return fmt.Sprintf(tpl)
+}
+
 func listView(m Model) string {
-	tpl := "osprey %s\n\n"
+	tpl := components.VersionNumber() + "\n\n"
 	tpl += config.Currenti18n.TorrentsActive + "\n"
 	for index, torrent := range m.TorrentList.Torrents {
 		tpl += components.Torrent(torrent, index == m.Cursor)
 	}
 	tpl += config.Currenti18n.PageInfo + "\n\n"
-	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.SelectKeybind, config.Currenti18n.Keybinds.ChangePageKeybind, config.Currenti18n.Keybinds.PauseResumeKeybind, config.Currenti18n.Keybinds.AddTorrentKeybind, config.Currenti18n.Keybinds.RemoveTorrentKeybind, config.Currenti18n.Keybinds.MoveTorrentKeybind, config.Currenti18n.Keybinds.QKeybind})
-
-	return fmt.Sprintf(tpl, config.Osprey_version, english.Plural(m.TorrentList.TorrentsTotal, config.Currenti18n.Torrent, ""), m.Page+1, getPageCount(m), config.Config.PageSize)
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.SelectKeybind, config.Currenti18n.Keybinds.ChangePageKeybind, config.Currenti18n.Keybinds.PauseResumeKeybind, config.Currenti18n.Keybinds.AddTorrentKeybind}) + "\n"
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.RemoveTorrentKeybind, config.Currenti18n.Keybinds.MoveTorrentKeybind, config.Currenti18n.Keybinds.TorrentSettingsKeybind, config.Currenti18n.Keybinds.QKeybind})
+	return fmt.Sprintf(tpl, english.Plural(m.TorrentList.TorrentsTotal, config.Currenti18n.Torrent, ""), m.Page+1, getPageCount(m), config.Config.PageSize)
 }
 
 func getPageCount(m Model) int {

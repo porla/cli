@@ -2,6 +2,11 @@ package torrents
 
 import "osprey/config"
 
+type RequestError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 type Torrent struct {
 	DownloadRate  uint64    `json:"download_rate"`
 	UploadRate    uint64    `json:"upload_rate"`
@@ -29,23 +34,45 @@ type TorrentList struct {
 	TorrentsTotal int       `json:"torrents_total"`
 }
 
-type TorrentListRequestError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+type TorrentListRequestResponse struct {
+	JSONRPC string       `json:"jsonrpc"`
+	Result  TorrentList  `json:"result"`
+	Error   RequestError `json:"error"`
 }
 
-type TorrentListRequestResponse struct {
-	JSONRPC string                  `json:"jsonrpc"`
-	Result  TorrentList             `json:"result"`
-	Error   TorrentListRequestError `json:"error"`
+type TorrentProperties struct {
+	DownloadLimit  int    `json:"download_limit"`
+	UploadLimit    int    `json:"upload_limit"`
+	Flags          uint64 `json:"flags"`
+	MaxConnections int    `json:"max_connections"`
+	MaxUploads     int    `json:"max_uploads"`
+}
+
+type TorrentPropertiesRequestResponse struct {
+	JSONRPC string            `json:"jsonrpc"`
+	Result  TorrentProperties `json:"result"`
+	Error   RequestError      `json:"error"`
+}
+
+type TorrentPropertiesSetData struct {
+	IsAutomaticallyManaged    bool
+	IsSequenciallyDownloading bool
+	DownloadLimit             string
+	MaxConnections            string
+	MaxUploads                string
+	UploadLimit               string
 }
 
 func checkBit(flags uint64, bit uint64) bool {
 	return (flags & (1 << bit)) == 1<<bit
 }
 
-func isAutoManaged(flags uint64) bool {
+func IsAutoManaged(flags uint64) bool {
 	return checkBit(flags, 5)
+}
+
+func IsSequenciallyDownloading(flags uint64) bool {
+	return checkBit(flags, 9)
 }
 
 func IsPaused(flags uint64) bool {
@@ -84,7 +111,7 @@ func StateString(torrent Torrent) string {
 	case 3:
 		{
 			if IsPaused(torrent.Flags) {
-				if isAutoManaged(torrent.Flags) {
+				if IsAutoManaged(torrent.Flags) {
 					return config.Currenti18n.TorrentStates.Queued
 				}
 				return config.Currenti18n.TorrentStates.Paused
@@ -96,7 +123,7 @@ func StateString(torrent Torrent) string {
 	case 5:
 		{
 			if IsPaused(torrent.Flags) {
-				if isAutoManaged(torrent.Flags) {
+				if IsAutoManaged(torrent.Flags) {
 					return config.Currenti18n.TorrentStates.SeedingQueued
 				}
 				return config.Currenti18n.TorrentStates.Finished

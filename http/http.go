@@ -152,6 +152,70 @@ func MoveTorrent(torrent torrents.Torrent, newPath string) {
 	utils.CheckError(err)
 }
 
+func GetTorrentProperties(torrent torrents.Torrent) torrents.TorrentProperties {
+	requestBody := []byte(`{
+		"jsonrpc": "2.0",
+		"method": "torrents.properties.get",
+		"params": {
+			"info_hash":` + getMarshalledInfoHash(torrent) + `
+		}
+	}`)
+	req, err := http.NewRequest("POST", config.Config.JSONRPCEndpointURL, bytes.NewBuffer(requestBody))
+	utils.CheckError(err)
+	req.Header.Add("Authorization", "Bearer "+config.Config.SecretKey)
+	resp, err := client.Do(req)
+	utils.CheckError(err)
+	body, err := ioutil.ReadAll(resp.Body)
+	utils.CheckError(err)
+	var torrentPropertiesRequestResponse torrents.TorrentPropertiesRequestResponse
+	json.Unmarshal(body, &torrentPropertiesRequestResponse)
+	return torrentPropertiesRequestResponse.Result
+}
+
+func SetTorrentProperties(torrent torrents.Torrent, torrentPropertiesSetData torrents.TorrentPropertiesSetData) {
+	set_flags := 0
+	if torrentPropertiesSetData.IsAutomaticallyManaged {
+		set_flags |= 1 << 5
+	}
+	if torrentPropertiesSetData.IsSequenciallyDownloading {
+		set_flags |= 1 << 9
+	}
+
+	unset_flags := 0
+	if !torrentPropertiesSetData.IsAutomaticallyManaged {
+		unset_flags |= 1 << 5
+	}
+	if !torrentPropertiesSetData.IsSequenciallyDownloading {
+		unset_flags |= 1 << 9
+	}
+	requestBody := []byte(`{
+		"jsonrpc": "2.0",
+		"method": "torrents.properties.set",
+		"params": {
+			"info_hash":` + getMarshalledInfoHash(torrent) + `,
+			"auto_managed": ` + marshallBool(torrentPropertiesSetData.IsAutomaticallyManaged) + `,
+			"download_limit": ` + torrentPropertiesSetData.DownloadLimit + `,
+			"max_connections": ` + torrentPropertiesSetData.MaxConnections + `,
+			"max_uploads": ` + torrentPropertiesSetData.MaxUploads + `,
+			"sequential_download": ` + marshallBool(torrentPropertiesSetData.IsSequenciallyDownloading) + `,
+			"set_flags": ` + strconv.Itoa(set_flags) + `,
+			"unset_flags": ` + strconv.Itoa(unset_flags) + `,
+			"upload_limit": ` + torrentPropertiesSetData.UploadLimit + `
+		}
+	}`)
+	req, err := http.NewRequest("POST", config.Config.JSONRPCEndpointURL, bytes.NewBuffer(requestBody))
+	utils.CheckError(err)
+	req.Header.Add("Authorization", "Bearer "+config.Config.SecretKey)
+	_, err = client.Do(req)
+	utils.CheckError(err)
+}
+
+func marshallBool(i bool) string {
+	o, err := json.Marshal(i)
+	utils.CheckError(err)
+	return string(o)
+}
+
 func getMarshalledInfoHash(torrent torrents.Torrent) string {
 	marshalledInfoHash, err := json.Marshal(torrent.InfoHash)
 	utils.CheckError(err)

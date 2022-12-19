@@ -28,6 +28,8 @@ type i18nKeybinds struct {
 	RemoveTorrentKeybind       string
 	MoveTorrentKeybind         string
 	ToggleMagnetTorrentKeybind string
+	TorrentSettingsKeybind     string
+	ToggleOptionKeybind        string
 }
 
 type I18n struct {
@@ -42,6 +44,15 @@ type I18n struct {
 
 	MovingTorrentName string
 	NewSavePath       string
+
+	TorrentSettingsForTorrentName string
+	AutomaticallyManaged          string
+	SequentialDownload            string
+	DownloadLimit                 string
+	DownloadLimitHint             string
+	MaxConnections                string
+	MaxUploads                    string
+	UploadLimit                   string
 
 	TorrentsActive string
 	Torrent        string
@@ -75,6 +86,15 @@ var English = I18n{
 	MovingTorrentName: "Moving %s",
 	NewSavePath:       "New save path",
 
+	TorrentSettingsForTorrentName: "Torrent settings for %s",
+	AutomaticallyManaged:          "Automatically managed",
+	SequentialDownload:            "Sequential download",
+	DownloadLimit:                 "Download limit",
+	DownloadLimitHint:             "The download limit for this torrent. -1 means unlimited.",
+	MaxConnections:                "Max connections",
+	MaxUploads:                    "Max uploads",
+	UploadLimit:                   "Upload limit",
+
 	TorrentsActive: "%s active",
 	Torrent:        "torrent",
 
@@ -97,7 +117,9 @@ var English = I18n{
 		PauseResumeKeybind:         "p: pause/resume torrent",
 		RemoveTorrentKeybind:       "r: remove torrent",
 		MoveTorrentKeybind:         "m: move torrent",
+		TorrentSettingsKeybind:     "s: torrent settings",
 		ToggleMagnetTorrentKeybind: "tab: toggle magnet/.torrent",
+		ToggleOptionKeybind:        "space: toggle option",
 	},
 
 	TorrentStates: i18nTorrentStates{
@@ -132,6 +154,15 @@ var French = I18n{
 	MovingTorrentName: "Déplacement de %s",
 	NewSavePath:       "Nouveau chemin d'enregistrement",
 
+	TorrentSettingsForTorrentName: "Réglages du torrent %s",
+	AutomaticallyManaged:          "Géré automatiquement",
+	SequentialDownload:            "Téléchargement séquentiel",
+	DownloadLimit:                 "Limite de la vitesse de téléchargement",
+	DownloadLimitHint:             "La limite de la vitesse de téléchargement pour ce torrent. -1 veut dire illimité.",
+	MaxConnections:                "Nombre max. de connections",
+	MaxUploads:                    "Nombre max. de partages",
+	UploadLimit:                   "Upload limit",
+
 	TorrentsActive: "%s actif(s)",
 	Torrent:        "torrent",
 
@@ -154,7 +185,9 @@ var French = I18n{
 		PauseResumeKeybind:         "p: interrompre/relancer le torrent",
 		RemoveTorrentKeybind:       "r: supprimer torrent",
 		MoveTorrentKeybind:         "m: déplacer torrent",
+		TorrentSettingsKeybind:     "s: réglages du torrent",
 		ToggleMagnetTorrentKeybind: "tab: basculer de lien magnet à fichier .torrent",
+		ToggleOptionKeybind:        "espace: faire basculer l'option",
 	},
 
 	TorrentStates: i18nTorrentStates{
