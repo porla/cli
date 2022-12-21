@@ -30,6 +30,7 @@ type i18nKeybinds struct {
 	ToggleMagnetTorrentKeybind string
 	TorrentSettingsKeybind     string
 	ToggleOptionKeybind        string
+	NinjaModeKeybind           string
 }
 
 type I18n struct {
@@ -120,6 +121,7 @@ var English = I18n{
 		TorrentSettingsKeybind:     "s: torrent settings",
 		ToggleMagnetTorrentKeybind: "tab: toggle magnet/.torrent",
 		ToggleOptionKeybind:        "space: toggle option",
+		NinjaModeKeybind:           "n: toggle ninja mode",
 	},
 
 	TorrentStates: i18nTorrentStates{
@@ -188,6 +190,7 @@ var French = I18n{
 		TorrentSettingsKeybind:     "s: réglages du torrent",
 		ToggleMagnetTorrentKeybind: "tab: basculer de lien magnet à fichier .torrent",
 		ToggleOptionKeybind:        "espace: faire basculer l'option",
+		NinjaModeKeybind:           "n : activer/désactiver le mode ninja",
 	},
 
 	TorrentStates: i18nTorrentStates{

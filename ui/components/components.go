@@ -5,6 +5,7 @@ import (
 	"math"
 	"osprey/config"
 	"osprey/data/torrents"
+	"osprey/ninja"
 	"osprey/ui/styling"
 	"strings"
 	"time"
@@ -43,9 +44,13 @@ func Progressbar(width int, percent float64) string {
 	return fmt.Sprintf("%s%s %3.0f", fullCells, emptyCells, math.Round(percent*100))
 }
 
-func Torrent(torrent torrents.Torrent, selected bool) string {
+func Torrent(torrent torrents.Torrent, index int, obfuscate, selected bool) string {
 	s := ""
-	torrentNameString := fmt.Sprintf("- %-9s %s\n", fmt.Sprintf("[%s]", torrents.StateString(torrent)), torrent.Name)
+	torrentName := torrent.Name
+	if obfuscate {
+		torrentName = ninja.RandomLinuxTorrent(index)
+	}
+	torrentNameString := fmt.Sprintf("- %-9s %s\n", fmt.Sprintf("[%s]", torrents.StateString(torrent)), torrentName)
 	if selected {
 		s += styling.ColorFg(torrentNameString, styling.HighlightedColor)
 	} else {

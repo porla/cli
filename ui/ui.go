@@ -99,6 +99,7 @@ func InitialModel() Model {
 			TorrentIsSequenciallyDownloading: false,
 			TorrentSettingsTextInputs:        torrentSettingsTextInputs,
 		},
+		NinjaMode: false,
 	}
 }
 
@@ -128,6 +129,7 @@ type Model struct {
 	AddTorrentSubMenuState      AddTorrentSubMenuState
 	MoveTorrentSubMenuState     MoveTorrentSubMenuState
 	TorrentSettingsSubMenuState TorrentSettingsSubMenuState
+	NinjaMode                   bool
 }
 
 func tick() tea.Cmd {
@@ -384,6 +386,8 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 				m.SubMenuEntries = 2 + len(m.TorrentSettingsSubMenuState.TorrentSettingsTextInputs)
 				m.CurrentView = TorrentSettingsIota
 			}
+		case "n":
+			m.NinjaMode = !m.NinjaMode
 		}
 	// Get updated info
 	case tickMsg:
@@ -500,11 +504,11 @@ func listView(m Model) string {
 	tpl := components.VersionNumber() + "\n\n"
 	tpl += config.Currenti18n.TorrentsActive + "\n"
 	for index, torrent := range m.TorrentList.Torrents {
-		tpl += components.Torrent(torrent, index == m.Cursor)
+		tpl += components.Torrent(torrent, index, m.NinjaMode, index == m.Cursor)
 	}
 	tpl += styling.Subtle(config.Currenti18n.PageInfo) + "\n\n"
 	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.SelectKeybind, config.Currenti18n.Keybinds.ChangePageKeybind, config.Currenti18n.Keybinds.PauseResumeKeybind, config.Currenti18n.Keybinds.AddTorrentKeybind}) + "\n"
-	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.RemoveTorrentKeybind, config.Currenti18n.Keybinds.MoveTorrentKeybind, config.Currenti18n.Keybinds.TorrentSettingsKeybind, config.Currenti18n.Keybinds.QKeybind})
+	tpl += components.KeybindsHints([]string{config.Currenti18n.Keybinds.RemoveTorrentKeybind, config.Currenti18n.Keybinds.MoveTorrentKeybind, config.Currenti18n.Keybinds.TorrentSettingsKeybind, config.Currenti18n.Keybinds.NinjaModeKeybind, config.Currenti18n.Keybinds.QKeybind})
 	return fmt.Sprintf(tpl, english.Plural(m.TorrentList.TorrentsTotal, config.Currenti18n.Torrent, ""), m.Page+1, getPageCount(m), config.Config.PageSize)
 }
 
