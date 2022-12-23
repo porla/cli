@@ -70,7 +70,9 @@ func AddTorrent(magnetURI, savePath string, addingMagnetLink bool) {
 			"params": {
 				"magnet_uri":"` + magnetURI + `",
 				"save_path":"` + savePath + `",
-				"source": "osprey"
+				"metadata": {
+					"source": "osprey"
+				}
 			}
 		}`)
 	} else {
@@ -90,7 +92,9 @@ func AddTorrent(magnetURI, savePath string, addingMagnetLink bool) {
 			"params": {
 				"ti":"` + encoded + `",
 				"save_path":"` + savePath + `",
-				"source": "osprey"
+				"metadata": {
+					"source": "osprey"
+				}
 			}
 		}`)
 	}
